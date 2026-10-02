@@ -1,0 +1,17 @@
+pebrel-pi-wsl, local compatibility package, version 0.1.0 (2026-10-02).
+Not an official Pebrel or Pi release.
+
+The event adapter and session identity validation are adapted from
+Kuddev/pebrel v2.1.1, nebula_app/res/hooks/pi.ts (GPL-3.0-only).
+The OSC envelope is compatible with that project's remote hook transport.
+
+This version implements transport directly with Node.js built-ins. It does not
+ship or invoke Python, a shell launcher, a background daemon, or an external
+helper. The installed Pi extension runtime supplies the Pi SDK.
+
+Modifications: package-managed installation, direct nonblocking Linux TTY
+transport, scope checks, verified session metadata, serial bounded delivery,
+and duplicate-instance suppression. Modified source is
+provided in the package under the included GPLv3 license. The upstream project
+and revision are identified above; this package does not include a full upstream
+checkout.

@@ -1,0 +1,16 @@
+{
+  "name": "pebrel-pi-wsl",
+  "version": "0.1.0",
+  "description": "Pi extension for authenticated Pebrel hook delivery inside WSL, without Python or external helpers",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "repository": {"type": "git", "url": "https://github.com/VauntlekV/pebrel-pi-wsl.git"},
+  "homepage": "https://github.com/VauntlekV/pebrel-pi-wsl#readme",
+  "bugs": {"url": "https://github.com/VauntlekV/pebrel-pi-wsl/issues"},
+  "keywords": ["pi-package", "pi-extension", "pebrel", "wsl"],
+  "files": ["index.ts", "src/", "README.md", "NOTICE", "LICENSE"],
+  "pi": {"extensions": ["./index.ts"]},
+  "peerDependencies": {"@earendil-works/pi-coding-agent": "*"},
+  "engines": {"node": ">=22.19.0"},
+  "scripts": {"test": "node --test tests/*.test.mjs"}
+}
