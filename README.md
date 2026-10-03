@@ -7,7 +7,7 @@
 在 Pebrel 中启用 AI hook 功能，然后在 Pebrel 的 WSL 终端中安装：
 
 ```bash
-pi install git:github.com/VauntlekV/pebrel-pi-wsl@v0.1.0
+pi install git:github.com/VauntlekV/pebrel-pi-wsl
 ```
 
 启动 Pi，扩展会自动加载：
@@ -44,19 +44,18 @@ pi list
 pi config
 
 # 卸载
-pi remove git:github.com/VauntlekV/pebrel-pi-wsl@v0.1.0
+pi remove git:github.com/VauntlekV/pebrel-pi-wsl
 ```
 
-调整扩展后，重启 Pi 或执行 `/reload`。
-
-若使用上面的固定 `v0.1.0` Git 安装，它不会自动获取本地源码修复。要使用当前工作区版本，在仓库根目录执行：
+安装来源不固定标签或提交，使用仓库默认分支的最新代码。后续更新已安装的扩展：
 
 ```bash
-pi remove git:github.com/VauntlekV/pebrel-pi-wsl@v0.1.0
-pi install ./pebrel-pi-wsl
+pi update --extensions
 ```
 
-若原安装源不同，请移除对应的旧来源，避免同时加载两个桥接实例。安装后在已运行的 Pi 中执行 `/reload`，或重启 Pi。
+更新后，重启 Pi 或执行 `/reload`。
+
+若此前安装时指定了版本标签，请先移除旧的安装来源，再使用上面的无版本命令重新安装；已安装的固定来源不会因 README 修改而自动切换。
 
 ## 工作方式
 
