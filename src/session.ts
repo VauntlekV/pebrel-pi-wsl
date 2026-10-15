@@ -1,22 +1,15 @@
 import { closeSync, constants, fstatSync, openSync, readSync } from "node:fs";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export interface SessionContext {
-  cwd?: string;
-  sessionManager?: {
-    getSessionId?: () => string | undefined;
-    getSessionFile?: () => string | undefined;
-  };
-}
+export type SessionContext = Pick<ExtensionContext, "cwd" | "sessionManager">;
 
-export function sessionFor(ctx?: SessionContext): { session_id?: string; session_file?: string } {
-  let direct: string | undefined;
-  let file: string | undefined;
-  try { direct = ctx?.sessionManager?.getSessionId?.(); } catch {}
-  try { file = ctx?.sessionManager?.getSessionFile?.(); } catch {}
-  if (typeof direct !== "string" || !direct || direct.length > 512) direct = undefined;
+export function sessionFor(ctx: SessionContext): { session_id?: string; session_file?: string } {
+  let direct: string | undefined = ctx.sessionManager.getSessionId();
+  const file = ctx.sessionManager.getSessionFile();
+  if (!direct || direct.length > 512) direct = undefined;
   let fd: number | undefined;
   try {
-    if (typeof file === "string" && file.length <= 4096 && file.endsWith(".jsonl")) {
+    if (file && file.length <= 4096 && file.endsWith(".jsonl")) {
       // Nonblocking open plus a regular-file check also avoids hanging on a FIFO.
       fd = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
       if (!fstatSync(fd).isFile()) return direct ? { session_id: direct } : {};

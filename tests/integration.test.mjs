@@ -147,6 +147,23 @@ test("error, abort, truncation and tool-use outcomes are preserved", () => {
   }
 });
 
+test("agent_end without assistant messages reports an unknown stop reason", () => {
+  assert.equal(run("no-assistant").find(event => event.kind === "done").stop_reason, "unknown");
+});
+
+test("waiting input survives concurrent tools and resumes only once", () => {
+  const events = run("waiting");
+  assert.deepEqual(events.map(event => event.kind), ["session-start", "prompt", "attention", "tool-complete", "done", "session-end"]);
+  const attention = events[2];
+  assert.equal(attention.project, `Ask_Questions[${attention.cwd.split("/").at(-1)}]`);
+  assert.equal(attention.message, "Pi正在等待选择或输入。");
+  assert.doesNotMatch(JSON.stringify(events), /SECRET_QUESTION|SECRET_ANSWER|SECRET_PROVIDER_ERROR/);
+});
+
+test("settling clears an open prompt without a late resume event", () => {
+  assert.deepEqual(run("waiting-settled").map(event => event.kind), ["session-start", "prompt", "attention", "done", "session-end"]);
+});
+
 test("concurrent tool events stay ordered before completion", () => {
   assert.deepEqual(run("concurrent").map(e => e.kind), ["session-start", "prompt", "tool-complete", "tool-complete", "tool-complete", "done", "session-end"]);
 });

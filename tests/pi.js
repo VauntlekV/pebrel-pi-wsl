@@ -31,18 +31,28 @@ const emit = async (name, event = {}) => {
     for (const handler of extension.handlers.get(name) ?? []) await handler({ type: name, ...event }, ctx);
   }
 };
-const end = reason => emit("agent_end", { messages: [{ role: "assistant", stopReason: reason,
-  errorMessage: "SECRET_PROVIDER_ERROR", content: [{ type: "text", text: "SECRET_ANSWER" }] }] });
+const end = reason => emit("agent_end", { messages: scenario === "no-assistant" ? [] : [
+  { role: "assistant", stopReason: "error", content: [] },
+  { role: "assistant", stopReason: reason, errorMessage: "SECRET_PROVIDER_ERROR", content: [{ type: "text", text: "SECRET_ANSWER" }] },
+  { role: "user", content: "SECRET_ANSWER" },
+] });
 const beforeEnv = JSON.stringify(process.env);
 await emit("session_start");
 if (scenario === "mismatch") currentId = "954df806-7a41-441d-af3c-d2fddac35120";
+if (scenario.startsWith("waiting")) await emit("ui_prompt_start");
 await emit("agent_start");
 if (scenario === "retry") { await end("error"); await emit("agent_start"); }
-if (scenario === "concurrent") await Promise.all([emit("tool_result"), emit("tool_result"), emit("tool_result")]);
+if (scenario.startsWith("waiting")) {
+  await emit("ui_prompt_start", { title: "SECRET_QUESTION" });
+  await emit("ui_prompt_start");
+  await Promise.all([emit("tool_result"), emit("tool_result")]);
+  if (scenario === "waiting") { await emit("ui_prompt_end"); await emit("ui_prompt_end"); }
+} else if (scenario === "concurrent") await Promise.all([emit("tool_result"), emit("tool_result"), emit("tool_result")]);
 else await emit("tool_result");
 await end(["error", "aborted", "length", "toolUse"].includes(scenario) ? scenario : "stop");
 await emit("agent_settled");
 await emit("agent_settled");
+if (scenario.startsWith("waiting")) await emit("ui_prompt_end");
 await emit("session_shutdown");
 if (scenario === "reload") {
   extensions.splice(0, extensions.length, await makeLoader());

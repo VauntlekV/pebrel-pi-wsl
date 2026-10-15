@@ -21,9 +21,9 @@ export default function (pi: ExtensionAPI) {
   let reason = "unknown";
   let delivery = Promise.resolve();
 
-  function send(kind: Kind, ctx?: SessionContext, result: { stop_reason?: string; message?: string; project?: string } = {}): Promise<void> {
+  function send(kind: Kind, ctx: SessionContext, result: { stop_reason?: string; message?: string; project?: string } = {}): Promise<void> {
     const scope = resolveScope();
-    if (!scope || !supported || registry.owner !== instance) return Promise.resolve();
+    if (!scope || registry.owner !== instance) return Promise.resolve();
     try {
       // Match the remote protocol's integer sequence, without losing precision.
       // Keep it across reloads in this process; a new PID epoch is a new stream.
@@ -35,7 +35,7 @@ export default function (pi: ExtensionAPI) {
         bridge_instance: instance,
         bridge_sequence,
         event_id: `${instance}:${bridge_sequence}`,
-        cwd: typeof ctx?.cwd === "string" ? ctx.cwd.slice(0, 4096) : "",
+        cwd: ctx.cwd.slice(0, 4096),
         ...result,
       };
       const frame = encodeFrame(scope, processIdentity(), payload);
@@ -76,12 +76,11 @@ export default function (pi: ExtensionAPI) {
   pi.on("ui_prompt_end", async (_event, ctx) => {
     if (!waitingForInput) return;
     waitingForInput = false;
-    if (active) await send("tool-complete", ctx);
+    await send("tool-complete", ctx);
   });
-  pi.on("agent_end", async (event) => {
+  pi.on("agent_end", (event) => {
     if (!active) return;
-    const last = [...event.messages].reverse().find(message => message.role === "assistant");
-    reason = last?.role === "assistant" ? last.stopReason ?? "unknown" : "unknown";
+    reason = event.messages.findLast(message => message.role === "assistant")?.stopReason ?? "unknown";
   });
   pi.on("agent_settled", async (_event, ctx) => {
     if (!active) return;

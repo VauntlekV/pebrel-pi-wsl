@@ -99,7 +99,8 @@ test("metadata is verified, mismatches and malformed files preserve only the nat
     assert.deepEqual(sessionFor(ctx), { session_id: "native" });
     rmSync(file);
     assert.deepEqual(sessionFor(ctx), { session_id: "native" });
-    assert.deepEqual(sessionFor(), {});
+    ctx.sessionManager.getSessionFile = () => undefined;
+    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
