@@ -86,7 +86,7 @@ test("unavailable terminal and write errors do not throw", async () => {
   assert.equal(await writeFrame(Buffer.from("frame"), mock.io), false);
 });
 
-test("metadata is verified, mismatches and malformed files preserve only the native ID", () => {
+test("only matching, persisted metadata is a recoverable session identity", () => {
   const root = mkdtempSync(join(tmpdir(), "pebrel-session-"));
   try {
     const file = join(root, "会话.jsonl");
@@ -94,22 +94,22 @@ test("metadata is verified, mismatches and malformed files preserve only the nat
     writeFileSync(file, JSON.stringify({ type: "session", id: "native" }) + "\nSECRET_BODY");
     assert.deepEqual(sessionFor(ctx), { session_id: "native", session_file: file });
     writeFileSync(file, JSON.stringify({ type: "session", id: "different" }) + "\n");
-    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
+    assert.deepEqual(sessionFor(ctx), {});
     writeFileSync(file, "not-json\n");
-    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
+    assert.deepEqual(sessionFor(ctx), {});
     rmSync(file);
-    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
+    assert.deepEqual(sessionFor(ctx), {});
     ctx.sessionManager.getSessionFile = () => undefined;
-    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
+    assert.deepEqual(sessionFor(ctx), {});
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("non-regular session metadata is ignored without losing the native ID", () => {
+test("non-regular session metadata cannot publish a recovery target", () => {
   const root = mkdtempSync(join(tmpdir(), "pebrel-session-directory-"));
   try {
     const file = join(root, "not-a-file.jsonl");
     mkdirSync(file);
     const ctx = { sessionManager: { getSessionId: () => "native", getSessionFile: () => file } };
-    assert.deepEqual(sessionFor(ctx), { session_id: "native" });
+    assert.deepEqual(sessionFor(ctx), {});
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

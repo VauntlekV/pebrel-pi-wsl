@@ -1,6 +1,6 @@
 // Real Pi resource discovery and loader; mock events, no model or user credentials.
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -20,9 +20,11 @@ const extensions = [await makeLoader()];
 if (scenario === "duplicate") extensions.push(await makeLoader());
 const id = "57bbced3-ea1c-4f52-bcd1-e8e870c2f580";
 const file = join(process.env.HOME, "native-session.jsonl");
-writeFileSync(file, JSON.stringify({ type: "session", version: 3, id }) + "\n");
+const manager = scenario === "materialize" ? sdk.SessionManager.create(process.cwd(), join(process.env.HOME, "sessions")) : undefined;
+if (manager) assert.equal(existsSync(manager.getSessionFile()), false);
+else writeFileSync(file, JSON.stringify({ type: "session", version: 3, id }) + "\n");
 let currentId = id;
-const ctx = { cwd: process.cwd(), hasUI: false, sessionManager: {
+const ctx = { cwd: process.cwd(), hasUI: false, sessionManager: manager ?? {
   getSessionId: () => currentId,
   getSessionFile: () => scenario === "no-file" ? undefined : file,
 } };
@@ -38,6 +40,10 @@ const end = reason => emit("agent_end", { messages: scenario === "no-assistant" 
 ] });
 const beforeEnv = JSON.stringify(process.env);
 await emit("session_start");
+if (manager) {
+  manager.appendMessage({ role: "user", content: "SECRET_QUESTION", timestamp: Date.now() });
+  assert.equal(existsSync(manager.getSessionFile()), true);
+}
 if (scenario === "mismatch") currentId = "954df806-7a41-441d-af3c-d2fddac35120";
 if (scenario.startsWith("waiting")) await emit("ui_prompt_start");
 await emit("agent_start");

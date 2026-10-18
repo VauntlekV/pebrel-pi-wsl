@@ -89,11 +89,11 @@ test("real pi install/list/remove uses only a package setting, preserving unrela
   } finally { context.clean(); }
 });
 
-test("fresh real Pi startup loads the installed package and exits cleanly without Python", () => {
+test("fresh empty real Pi reports its lifecycle without an unpersisted recovery ID", () => {
   const context = isolated();
   try {
     install(context);
-    const command = [process.execPath, cli, "--mode", "rpc", "--no-session"]
+    const command = [process.execPath, cli, "--mode", "rpc"]
       .map(value => "'" + value.replaceAll("'", "'\\''") + "'").join(" ");
     const result = spawnSync("script", ["-q", "-e", "-c", command, "/dev/null"], {
       env: context.env, cwd: context.home, encoding: "utf8", timeout: 15000, maxBuffer: 1024 * 1024,
@@ -113,8 +113,11 @@ test("fresh real Pi startup loads the installed package and exits cleanly withou
       .map(line => { try { return JSON.parse(line); } catch { return undefined; } })
       .find(record => record?.type === "response" && record.id === "inspect");
     assert.equal(response?.success, true, result.stdout);
-    assert.equal(events[0].session_id, response.data.sessionId);
-    assert.equal(events[1].session_id, events[0].session_id);
+    assert.ok(response.data.sessionId, "Pi already has an ID before the conversation is persisted");
+    for (const event of events) {
+      assert.equal(event.session_id, undefined);
+      assert.equal(event.session_file, undefined);
+    }
     assert.equal(existsSync(join(context.home, ".local/share/pebrel-wsl-pi")), false);
   } finally { context.clean(); }
 });
@@ -174,16 +177,34 @@ test("invalid scopes do nothing, and inherited Windows helpers are never execute
   }
 });
 
-test("without a session file the authoritative native ID is still sent", () => {
-  for (const event of run("no-file")) {
-    assert.ok(event.session_id);
+test("without a session file lifecycle events continue without a recovery target", () => {
+  const events = run("no-file");
+  assert.deepEqual(events.map(e => e.kind), ["session-start", "prompt", "tool-complete", "done", "session-end"]);
+  for (const event of events) {
+    assert.equal(event.session_id, undefined);
     assert.equal(event.session_file, undefined);
   }
 });
 
-test("mismatched file identity never replaces the native ID", () => {
+test("the first persisted user message publishes the native identity in the same stream", () => {
+  const events = run("materialize");
+  assert.deepEqual(events.map(e => e.kind), ["session-start", "prompt", "tool-complete", "done", "session-end"]);
+  assert.equal(events[0].session_id, undefined);
+  assert.equal(events[0].session_file, undefined);
+  assert.ok(events[1].session_id);
+  assert.ok(events[1].session_file.endsWith(".jsonl"));
+  for (const event of events.slice(1)) {
+    assert.equal(event.session_id, events[1].session_id);
+    assert.equal(event.session_file, events[1].session_file);
+    assert.equal(event.bridge_instance, events[0].bridge_instance);
+    assert.equal(event.header, events[0].header);
+    assert.ok(event.bridge_sequence > events[0].bridge_sequence);
+  }
+});
+
+test("mismatched file identity cannot publish a recovery target", () => {
   for (const event of run("mismatch").slice(1)) {
-    assert.equal(event.session_id, "954df806-7a41-441d-af3c-d2fddac35120");
+    assert.equal(event.session_id, undefined);
     assert.equal(event.session_file, undefined);
   }
 });
